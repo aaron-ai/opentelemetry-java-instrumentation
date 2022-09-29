@@ -1,19 +1,27 @@
 plugins {
-    id("java")
+  id("otel.javaagent-instrumentation")
 }
 
-group = "org.example"
-version = "1.19.0-alpha-SNAPSHOT"
+muzzle {
+  pass {
+    group.set("org.apache.rocketmq")
+    module.set("rocketmq-client-java")
+    versions.set("[5.0.0,)")
+    assertInverse.set(true)
+  }
+}
 
 repositories {
-    mavenCentral()
+  mavenCentral()
+  mavenLocal()
 }
 
 dependencies {
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.1")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1")
-}
+  library("org.apache.rocketmq:rocketmq-client-java:5.0.3-SNAPSHOT")
 
-tasks.getByName<Test>("test") {
-    useJUnitPlatform()
+  implementation(project(":instrumentation:rocketmq:rocketmq-client-java:rocketmq-client-java-5.0:library"))
+
+  testImplementation(project(":instrumentation:rocketmq:rocketmq-client-java:rocketmq-client-java-5.0:testing"))
+
+  testLibrary("org.apache.rocketmq:rocketmq-test:4.8.0")
 }
