@@ -2,15 +2,6 @@ plugins {
   id("otel.javaagent-instrumentation")
 }
 
-muzzle {
-  pass {
-    group.set("org.apache.rocketmq")
-    module.set("rocketmq-client-java")
-    versions.set("[5.0.0,)")
-    assertInverse.set(true)
-  }
-}
-
 repositories {
   mavenCentral()
   mavenLocal()

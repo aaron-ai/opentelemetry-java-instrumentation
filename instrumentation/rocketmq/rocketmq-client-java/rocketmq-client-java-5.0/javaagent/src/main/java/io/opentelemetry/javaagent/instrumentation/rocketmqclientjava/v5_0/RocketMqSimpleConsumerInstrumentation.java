@@ -5,4 +5,19 @@
 
 package io.opentelemetry.javaagent.instrumentation.rocketmqclientjava.v5_0;
 
-public class RocketMqSimpleConsumerInstrumentation {}
+import static net.bytebuddy.matcher.ElementMatchers.named;
+
+import io.opentelemetry.javaagent.extension.instrumentation.TypeInstrumentation;
+import io.opentelemetry.javaagent.extension.instrumentation.TypeTransformer;
+import net.bytebuddy.description.type.TypeDescription;
+import net.bytebuddy.matcher.ElementMatcher;
+
+public class RocketMqSimpleConsumerInstrumentation implements TypeInstrumentation {
+  @Override
+  public ElementMatcher<TypeDescription> typeMatcher() {
+    return named("org.apache.rocketmq.client.java.impl.consumer.SimpleConsumerImpl");
+  }
+
+  @Override
+  public void transform(TypeTransformer transformer) {}
+}
