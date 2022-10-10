@@ -12,6 +12,7 @@ import static net.bytebuddy.matcher.ElementMatchers.takesArguments;
 
 import io.opentelemetry.javaagent.extension.instrumentation.TypeInstrumentation;
 import io.opentelemetry.javaagent.extension.instrumentation.TypeTransformer;
+import java.util.List;
 import net.bytebuddy.asm.Advice;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.matcher.ElementMatcher;
@@ -33,7 +34,12 @@ public class RocketMqProducerInstrumentation implements TypeInstrumentation {
                 takesArgument(
                     0,
                     named(
-                        "org.apache.rocketmq.shaded.com.google.common.util.concurrent.SettableFuture"))),
+                        "org.apache.rocketmq.shaded.com.google.common.util.concurrent.SettableFuture")))
+            .and(takesArgument(1, String.class))
+            .and(takesArgument(2, named("org.apache.rocketmq.client.java.message.MessageType")))
+            .and(takesArgument(3, List.class))
+            .and(takesArgument(4, List.class))
+            .and(takesArgument(5, int.class)),
         RocketMqProducerInstrumentation.class.getName() + "$StartAdvice");
   }
 
