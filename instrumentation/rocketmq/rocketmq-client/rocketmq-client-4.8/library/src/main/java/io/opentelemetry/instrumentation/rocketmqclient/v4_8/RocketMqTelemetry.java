@@ -45,7 +45,7 @@ public final class RocketMqTelemetry {
 
   /**
    * Returns a new {@link ConsumeMessageHook} for use with methods like {@link
-   * org.apache.rocketmq.client.impl.consumer.DefaultMQPullConsumerImpl#registerConsumeMessageHook(ConsumeMessageHook)}.
+   * org.apache.rocketmq.client.impl.consumer.DefaultMQPushConsumerImpl#registerConsumeMessageHook(ConsumeMessageHook)}.
    */
   public ConsumeMessageHook newTracingConsumeMessageHook() {
     return new TracingConsumeMessageHookImpl(rocketMqConsumerInstrumenter);
