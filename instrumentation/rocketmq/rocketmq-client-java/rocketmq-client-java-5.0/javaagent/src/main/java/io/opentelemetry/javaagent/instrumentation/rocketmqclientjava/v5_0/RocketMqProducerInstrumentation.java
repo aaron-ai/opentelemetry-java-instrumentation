@@ -63,7 +63,7 @@ public class RocketMqProducerInstrumentation implements TypeInstrumentation {
       Instrumenter<PublishingMessageImpl, SendReceiptImpl> instrumenter =
           RocketMqSingletons.producerInstrumenter();
       int count = messages.size();
-      List<SettableFuture<SendReceiptImpl>> futures = covert(future0, count);
+      List<SettableFuture<SendReceiptImpl>> futures = FutureConverter.covert(future0, count);
       for (int i = 0; i < count; i++) {
         PublishingMessageImpl message = messages.get(i);
         SettableFuture<SendReceiptImpl> future = futures.get(i);
@@ -71,20 +71,28 @@ public class RocketMqProducerInstrumentation implements TypeInstrumentation {
           return;
         }
         Context context = instrumenter.start(parentContext, message);
-        Futures.addCallback(future, new SpanFinishingCallback<>(instrumenter, context, message), MoreExecutors.directExecutor());
+        Futures.addCallback(
+            future,
+            new SpanFinishingCallback<>(instrumenter, context, message),
+            MoreExecutors.directExecutor());
       }
     }
   }
 
-  public static <T> List<SettableFuture<T>> covert(SettableFuture<List<T>> future, int num) {
-    List<SettableFuture<T>> futures = new ArrayList<>(num);
-    for (int i = 0; i < num; i++) {
-      SettableFuture<T> f = SettableFuture.create();
-      futures.add(f);
+  public static class FutureConverter {
+
+    private FutureConverter() {}
+
+    public static <T> List<SettableFuture<T>> covert(SettableFuture<List<T>> future, int num) {
+      List<SettableFuture<T>> futures = new ArrayList<>(num);
+      for (int i = 0; i < num; i++) {
+        SettableFuture<T> f = SettableFuture.create();
+        futures.add(f);
+      }
+      ListFutureCallback<T> futureCallback = new ListFutureCallback<>(futures);
+      Futures.addCallback(future, futureCallback, MoreExecutors.directExecutor());
+      return futures;
     }
-    ListFutureCallback<T> futureCallback = new ListFutureCallback<>(futures);
-    Futures.addCallback(future, futureCallback, MoreExecutors.directExecutor());
-    return futures;
   }
 
   public static class ListFutureCallback<T> implements FutureCallback<List<T>> {
@@ -115,7 +123,10 @@ public class RocketMqProducerInstrumentation implements TypeInstrumentation {
     private final Context context;
     private final PublishingMessageImpl message;
 
-    public SpanFinishingCallback(Instrumenter<PublishingMessageImpl, SendReceiptImpl> instrumenter, Context context, PublishingMessageImpl message) {
+    public SpanFinishingCallback(
+        Instrumenter<PublishingMessageImpl, SendReceiptImpl> instrumenter,
+        Context context,
+        PublishingMessageImpl message) {
       this.instrumenter = instrumenter;
       this.context = context;
       this.message = message;
