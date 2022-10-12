@@ -11,13 +11,12 @@ import io.opentelemetry.context.propagation.TextMapGetter;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
-import javax.annotation.Nullable;
-import org.apache.rocketmq.client.apis.message.Message;
+import org.apache.rocketmq.client.java.message.PublishingMessageImpl;
 
 public class ParentContextExtractor {
   private ParentContextExtractor() {}
 
-  public static Context fromMessage(Message message) {
+  public static Context fromMessage(PublishingMessageImpl message) {
     Optional<String> parentTraceContext = message.getParentTraceContext();
     if (!parentTraceContext.isPresent()) {
       return Context.root();
@@ -37,9 +36,10 @@ public class ParentContextExtractor {
       return carrier.keySet();
     }
 
-    @Nullable
+    @SuppressWarnings("NullableProblems")
     @Override
-    public String get(@Nullable Map<String, String> carrier, String key) {
+    public String get(Map<String, String> carrier, String key) {
+      assert carrier != null;
       return carrier.get(key);
     }
   }

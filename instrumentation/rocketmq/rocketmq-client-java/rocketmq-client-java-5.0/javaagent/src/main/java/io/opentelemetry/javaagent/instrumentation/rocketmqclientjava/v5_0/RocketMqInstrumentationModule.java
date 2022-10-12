@@ -19,7 +19,6 @@ public class RocketMqInstrumentationModule extends InstrumentationModule {
 
   @Override
   public List<TypeInstrumentation> typeInstrumentations() {
-    System.out.println("xxx");
     return Collections.singletonList(new RocketMqProducerInstrumentation());
   }
 }

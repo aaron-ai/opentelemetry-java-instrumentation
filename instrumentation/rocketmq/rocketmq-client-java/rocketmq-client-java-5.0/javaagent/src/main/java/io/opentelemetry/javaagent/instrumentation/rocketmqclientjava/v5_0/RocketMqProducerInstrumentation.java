@@ -10,8 +10,10 @@ import static net.bytebuddy.matcher.ElementMatchers.named;
 import static net.bytebuddy.matcher.ElementMatchers.takesArgument;
 import static net.bytebuddy.matcher.ElementMatchers.takesArguments;
 
+import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.instrumentation.api.instrumenter.Instrumenter;
+import io.opentelemetry.instrumentation.rocketmqclientjava.v5_0.ParentContextExtractor;
 import io.opentelemetry.javaagent.extension.instrumentation.TypeInstrumentation;
 import io.opentelemetry.javaagent.extension.instrumentation.TypeTransformer;
 import java.util.ArrayList;
@@ -61,16 +63,20 @@ public class RocketMqProducerInstrumentation implements TypeInstrumentation {
         @Advice.This ProducerImpl producer,
         @Advice.Argument(0) SettableFuture<List<SendReceiptImpl>> future0,
         @Advice.Argument(4) List<PublishingMessageImpl> messages) {
-      System.out.println(producer);
-      System.out.println(future0);
-      System.out.println(messages);
-      Context parentContext = Context.current();
       Instrumenter<PublishingMessageImpl, SendReceiptImpl> instrumenter =
           RocketMqSingletons.producerInstrumenter();
       int count = messages.size();
       List<SettableFuture<SendReceiptImpl>> futures = FutureConverter.covert(future0, count);
       for (int i = 0; i < count; i++) {
         PublishingMessageImpl message = messages.get(i);
+
+        // Try to extract parent context from message.
+        Context parentContext = ParentContextExtractor.fromMessage(message);
+        Span span = Span.fromContext(parentContext);
+        if (!span.getSpanContext().isValid()) {
+          parentContext = Context.current();
+        }
+
         SettableFuture<SendReceiptImpl> future = futures.get(i);
         if (!instrumenter.shouldStart(parentContext, message)) {
           return;
