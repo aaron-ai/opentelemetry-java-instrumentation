@@ -28,6 +28,8 @@ import org.apache.rocketmq.shaded.com.google.common.util.concurrent.MoreExecutor
 import org.apache.rocketmq.shaded.com.google.common.util.concurrent.SettableFuture;
 
 public class RocketMqProducerInstrumentation implements TypeInstrumentation {
+
+  /** Match the implementation of RocketMQ producer. */
   @Override
   public ElementMatcher<TypeDescription> typeMatcher() {
     return named("org.apache.rocketmq.client.java.impl.producer.ProducerImpl");
@@ -59,6 +61,9 @@ public class RocketMqProducerInstrumentation implements TypeInstrumentation {
         @Advice.This ProducerImpl producer,
         @Advice.Argument(0) SettableFuture<List<SendReceiptImpl>> future0,
         @Advice.Argument(4) List<PublishingMessageImpl> messages) {
+      System.out.println(producer);
+      System.out.println(future0);
+      System.out.println(messages);
       Context parentContext = Context.current();
       Instrumenter<PublishingMessageImpl, SendReceiptImpl> instrumenter =
           RocketMqSingletons.producerInstrumenter();
@@ -79,6 +84,7 @@ public class RocketMqProducerInstrumentation implements TypeInstrumentation {
     }
   }
 
+  /** Future converter, which covert future of list into list of future. */
   public static class FutureConverter {
 
     private FutureConverter() {}
