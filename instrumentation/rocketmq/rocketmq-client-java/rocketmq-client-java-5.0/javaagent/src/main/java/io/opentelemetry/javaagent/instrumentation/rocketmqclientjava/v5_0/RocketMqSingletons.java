@@ -16,7 +16,7 @@ import org.apache.rocketmq.client.java.message.PublishingMessageImpl;
 public class RocketMqSingletons {
   private static final boolean PROPAGATION_ENABLED =
       InstrumentationConfig.get()
-          .getBoolean("otel.instrumentation.kafka.client-propagation.enabled", true);
+          .getBoolean("otel.instrumentation.rocketmq-client-java.propagation", true);
 
   private static final Instrumenter<PublishingMessageImpl, SendReceiptImpl> PRODUCER_INSTRUMENTER;
 
