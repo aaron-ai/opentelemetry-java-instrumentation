@@ -14,6 +14,7 @@ import io.opentelemetry.context.Context;
 import io.opentelemetry.instrumentation.api.instrumenter.Instrumenter;
 import io.opentelemetry.javaagent.extension.instrumentation.TypeInstrumentation;
 import io.opentelemetry.javaagent.extension.instrumentation.TypeTransformer;
+import java.util.ArrayList;
 import java.util.List;
 import net.bytebuddy.asm.Advice;
 import net.bytebuddy.description.type.TypeDescription;
@@ -56,36 +57,80 @@ public class RocketMqProducerInstrumentation implements TypeInstrumentation {
     @Advice.OnMethodEnter(suppress = Throwable.class)
     public static void onEnter(
         @Advice.This ProducerImpl producer,
-        @Advice.Argument(0) SettableFuture<List<SendReceiptImpl>> future,
+        @Advice.Argument(0) SettableFuture<List<SendReceiptImpl>> future0,
         @Advice.Argument(4) List<PublishingMessageImpl> messages) {
       Context parentContext = Context.current();
-      Instrumenter<PublishingMessageImpl, SendReceiptImpl> producerInstrumenter =
+      Instrumenter<PublishingMessageImpl, SendReceiptImpl> instrumenter =
           RocketMqSingletons.producerInstrumenter();
       int count = messages.size();
+      List<SettableFuture<SendReceiptImpl>> futures = covert(future0, count);
       for (int i = 0; i < count; i++) {
         PublishingMessageImpl message = messages.get(i);
-        if (!producerInstrumenter.shouldStart(parentContext, message)) {
+        SettableFuture<SendReceiptImpl> future = futures.get(i);
+        if (!instrumenter.shouldStart(parentContext, message)) {
           return;
         }
-        Context context = producerInstrumenter.start(parentContext, message);
-        int j = i;
-        Futures.addCallback(
-            future,
-            new FutureCallback<List<SendReceiptImpl>>() {
-              @Override
-              public void onSuccess(List<SendReceiptImpl> sendReceipts) {
-                SendReceiptImpl sendReceipt = sendReceipts.get(j);
-                producerInstrumenter.end(context, message, sendReceipt, null);
-              }
-
-              @SuppressWarnings("NullableProblems")
-              @Override
-              public void onFailure(Throwable throwable) {
-                producerInstrumenter.end(context, message, null, throwable);
-              }
-            },
-            MoreExecutors.directExecutor());
+        Context context = instrumenter.start(parentContext, message);
+        Futures.addCallback(future, new SpanFinishingCallback<>(instrumenter, context, message), MoreExecutors.directExecutor());
       }
+    }
+  }
+
+  public static <T> List<SettableFuture<T>> covert(SettableFuture<List<T>> future, int num) {
+    List<SettableFuture<T>> futures = new ArrayList<>(num);
+    for (int i = 0; i < num; i++) {
+      SettableFuture<T> f = SettableFuture.create();
+      futures.add(f);
+    }
+    ListFutureCallback<T> futureCallback = new ListFutureCallback<>(futures);
+    Futures.addCallback(future, futureCallback, MoreExecutors.directExecutor());
+    return futures;
+  }
+
+  public static class ListFutureCallback<T> implements FutureCallback<List<T>> {
+    private final List<SettableFuture<T>> futures;
+
+    public ListFutureCallback(List<SettableFuture<T>> futures) {
+      this.futures = futures;
+    }
+
+    @Override
+    public void onSuccess(List<T> result) {
+      for (int i = 0; i < result.size(); i++) {
+        futures.get(i).set(result.get(i));
+      }
+    }
+
+    @SuppressWarnings("NullableProblems")
+    @Override
+    public void onFailure(Throwable t) {
+      for (SettableFuture<T> future : futures) {
+        future.setException(t);
+      }
+    }
+  }
+
+  public static class SpanFinishingCallback<T> implements FutureCallback<T> {
+    private final Instrumenter<PublishingMessageImpl, SendReceiptImpl> instrumenter;
+    private final Context context;
+    private final PublishingMessageImpl message;
+
+    public SpanFinishingCallback(Instrumenter<PublishingMessageImpl, SendReceiptImpl> instrumenter, Context context, PublishingMessageImpl message) {
+      this.instrumenter = instrumenter;
+      this.context = context;
+      this.message = message;
+    }
+
+    @Override
+    public void onSuccess(T result) {
+      SendReceiptImpl sendReceipt = (SendReceiptImpl) result;
+      instrumenter.end(context, message, sendReceipt, null);
+    }
+
+    @SuppressWarnings("NullableProblems")
+    @Override
+    public void onFailure(Throwable t) {
+      instrumenter.end(context, message, null, t);
     }
   }
 }
