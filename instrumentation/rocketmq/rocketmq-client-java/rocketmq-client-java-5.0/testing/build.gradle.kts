@@ -1,19 +1,14 @@
 plugins {
-    id("java")
-}
-
-group = "org.example"
-version = "1.19.0-alpha-SNAPSHOT"
-
-repositories {
-    mavenCentral()
+  id("otel.java-conventions")
 }
 
 dependencies {
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.8.1")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.8.1")
-}
+  api(project(":testing-common"))
+  api("org.mockito:mockito-core")
+  api("org.mockito:mockito-junit-jupiter")
 
-tasks.getByName<Test>("test") {
-    useJUnitPlatform()
+  implementation("com.google.guava:guava")
+  implementation("org.apache.groovy:groovy")
+  implementation("io.opentelemetry:opentelemetry-api")
+  implementation("org.spockframework:spock-core")
 }

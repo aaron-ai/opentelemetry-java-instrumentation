@@ -21,6 +21,8 @@ public class ParentContextExtractor {
     if (!parentTraceContext.isPresent()) {
       return Context.root();
     }
+
+    // Use W3C standard propagator to propagate trace context.
     return W3CTraceContextPropagator.getInstance()
         .extract(
             Context.root(),
