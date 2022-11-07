@@ -10,3 +10,9 @@ dependencies {
   implementation("org.testcontainers:testcontainers:1.17.5")
   implementation("io.opentelemetry:opentelemetry-api")
 }
+
+tasks {
+  test {
+    jvmArgs("-Dotel.instrumentation.messaging.experimental.receive-telemetry.enabled=true")
+  }
+}
